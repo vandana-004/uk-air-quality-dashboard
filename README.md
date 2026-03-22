@@ -48,9 +48,13 @@ python dashboard/app.py
 ## Project Structure
 
 cleaning/data_cleaning.py        - Data cleaning pipeline
+
 dashboard/app.py                 - Main Dash application
+
 dashboard/components/            - Individual dashboard components
+
 sprint_docs/                     - Sprint documentation
+
 data/                            - Local only, not on GitHub (see step 3)
 
 ---
