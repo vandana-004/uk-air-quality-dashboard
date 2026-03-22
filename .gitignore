@@ -1,4 +1,23 @@
-# .gitignore
+# Data files - too large for GitHub, shared via Google Drive
 data/*.csv
 data/*.xlsx
 *.csv
+*.xlsx
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Environment files
+.env
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Colab/Jupyter
+*.ipynb
