@@ -21,3 +21,5 @@ Thumbs.db
 
 # Colab/Jupyter
 *.ipynb
+
+config.py
