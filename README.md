@@ -9,10 +9,10 @@ A Python Dash dashboard analysing air quality across UK cities using DEFRA AURN 
 
 | Name    | Role                                |
 |---------|-------------------------------------|
-| Vandana | Data Lead / Scrum Leader (Sprint 3) |
+| Vandana | Data Lead                           |
 | Nikhil  | Business & Documentation Lead       |
-| Semih   | Scrum Lead / Coordinator            |
-| Vignesh | Dashboard / Technical Lead          |
+| Semih   | Coordinator                         |
+| Vignesh | Technical Lead                      |
 
 ---
 
