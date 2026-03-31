@@ -1,24 +1,29 @@
 from dash import Dash, dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
+import sys
+import os
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # -------------------------------
 # LOAD DATA
 # -------------------------------
+
+
+
 file_id = "1O0EHdGpub7OxxS3L4S39DZnexZzmgXrR"
 url = f"https://drive.google.com/uc?id={file_id}"
 
-output = "data.csv"
-
-df = pd.read_csv(output)
+from config import DATA_PATH
+df = pd.read_csv(DATA_PATH)
 df["date"] = pd.to_datetime(df["date"])
 df["month"] = df["date"].dt.month
 
-pollutants = ["co","nox","no2","o3","so2","pm10","pm25"]
+pollutants = ["co","nox","no2","o3","so2","pm10","pm2.5"]
 
 # KPI values
-avg_pm25 = round(df["pm25"].mean(),2)
+avg_pm25 = round(df["pm2.5"].mean(),2)
 avg_no2 = round(df["no2"].mean(),2)
 avg_o3 = round(df["o3"].mean(),2)
 
@@ -60,7 +65,7 @@ app.layout = html.Div([
         dcc.Dropdown(
             id="pollutant",
             options=[{"label":i.upper(),"value":i} for i in pollutants],
-            value="pm25"
+            value="pm2.5"
         )
 
     ], style={"width":"30%","margin":"auto"}),
