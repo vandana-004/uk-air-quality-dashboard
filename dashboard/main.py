@@ -54,8 +54,8 @@ app.layout = html.Div([
         html.Label("Select Pollutant"),
         dcc.Dropdown(
             id="pollutant",
-            options=[{"label":i.upper(),"value":i} for i in pollutants],
-            value="pm25"
+            options=[{"label": i.upper(), "value": i} for i in pollutants],
+            value="pm2.5"
         ),
 
         html.Br(),
@@ -63,19 +63,13 @@ app.layout = html.Div([
         html.Label("Select City"),
         dcc.Dropdown(
             id="city",
-            options=[{"label":i,"value":i} for i in df["site"].dropna().unique()],
+            options=[{"label": i, "value": i} for i in df["site"].dropna().unique()],
             value=df["site"].dropna().unique()[0]
         )
 
-    ], style={"width":"40%","margin":"auto"}),
+    ], style={"width":"30%","margin":"auto"}),
 
     html.Br(),
-)
-
-# -------------------------------
-# LAYOUT
-# -------------------------------
-app.layout = html.Div([
 
     html.H1(
         "UK Air Quality Analytics Dashboard",
@@ -107,27 +101,6 @@ app.layout = html.Div([
 
     html.Br(),
 
-    # Filters
-    html.Div([
-        html.Label("Select Monitoring Site"),
-        dcc.Dropdown(
-            id="site",
-            options=[{"label": i, "value": i} for i in sorted(df["site"].dropna().unique())],
-            value=sorted(df["site"].dropna().unique())[0]
-        ),
-
-        html.Br(),
-
-        html.Label("Select Pollutant"),
-        dcc.Dropdown(
-            id="pollutant",
-            options=[{"label": i.upper(), "value": i} for i in pollutants],
-            value="pm2.5"
-        )
-    ], style={"width": "30%", "margin": "auto"}),
-
-    html.Br(),
-
     html.Div(id="stats-box"),
     html.Br(),
     html.Div(id="pollutant-info"),
@@ -146,7 +119,18 @@ app.layout = html.Div([
 
     dcc.Graph(id="bubble-chart"),
     dcc.Graph(id="correlation_graph"),
-    dcc.Graph(id="map_graph")
+    dcc.Graph(id="map_graph"),
+
+    html.H2("Advanced Insights"),
+    html.Div(id="most_polluted_year"),
+    dcc.Graph(id="year_graph"),
+
+    html.Div(id="most_polluted_month"),
+    dcc.Graph(id="month_graph"),
+
+    html.Div(id="best_season"),
+    dcc.Graph(id="season_graph"),
+])
 
     # -------------------------------
     # USER STORY 18
@@ -193,22 +177,20 @@ def download_dataset(n_clicks):
     Output("map_graph", "figure"),
     Output("stats-box", "children"),
     Output("pollutant-info", "children"),
-    Output("most_polluted_year","children"),
-    Output("year_graph","figure"),
-    Output("most_polluted_month","children"),
-    Output("month_graph","figure"),
-    Output("best_season","children"),
-    Output("season_graph","figure"),
-    Input("pollutant","value"),
-    Input("city","value"),
-    Input("site", "value"),
+    Output("most_polluted_year", "children"),
+    Output("year_graph", "figure"),
+    Output("most_polluted_month", "children"),
+    Output("month_graph", "figure"),
+    Output("best_season", "children"),
+    Output("season_graph", "figure"),
     Input("pollutant", "value"),
+    Input("city", "value"),
     Input("date-range", "start_date"),
     Input("date-range", "end_date")
 )
-def update_dashboard(site, pollutant, city, start_date, end_date):
+def update_dashboard(pollutant, city, start_date, end_date):
     filtered = df[
-        (df["site"] == site) &
+        (df["site"] == city) &
         (df["date"] >= pd.to_datetime(start_date)) &
         (df["date"] <= pd.to_datetime(end_date))
     ].copy()
@@ -219,7 +201,24 @@ def update_dashboard(site, pollutant, city, start_date, end_date):
         empty_fig = {}
         no_stats = html.Div("No data available for the selected filters.")
         no_info = html.Div("No description available.")
-        return empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, no_stats, no_info
+        no_text = html.Div("No result available.")
+        return (
+            empty_fig,
+            empty_fig,
+            empty_fig,
+            empty_fig,
+            empty_fig,
+            empty_fig,
+            empty_fig,
+            no_stats,
+            no_info,
+            no_text,
+            empty_fig,
+            no_text,
+            empty_fig,
+            no_text,
+            empty_fig
+        )
 
     filtered = filtered.sort_values("date").tail(1000)
 
@@ -394,3 +393,5 @@ def update_dashboard(site, pollutant, city, start_date, end_date):
         season_fig
     )
 
+if __name__ == "__main__":
+    app.run(debug=True)
