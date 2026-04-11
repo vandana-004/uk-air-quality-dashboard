@@ -16,6 +16,20 @@ df["date"] = pd.to_datetime(df["date"], errors="coerce")
 df = df.dropna(subset=["date", "site"])
 
 df["month"] = df["date"].dt.month
+df["year"] = df["date"].dt.year
+
+# Season mapping (User Story 3)
+def get_season(month):
+    if month in [12,1,2]:
+        return "Winter"
+    elif month in [3,4,5]:
+        return "Spring"
+    elif month in [6,7,8]:
+        return "Summer"
+    else:
+        return "Autumn"
+
+df["season"] = df["month"].apply(get_season)
 
 pollutants = ["co", "nox", "no2", "o3", "so2", "pm10", "pm2.5"]
 
@@ -29,6 +43,34 @@ avg_o3 = round(df["o3"].mean(), 2)
 # -------------------------------
 app = Dash(__name__)
 server = app.server
+
+app.layout = html.Div([
+
+    html.H1("Sprint 4 - Air Quality Insights",
+            style={"textAlign":"center"}),
+
+    # Filters
+    html.Div([
+        html.Label("Select Pollutant"),
+        dcc.Dropdown(
+            id="pollutant",
+            options=[{"label":i.upper(),"value":i} for i in pollutants],
+            value="pm25"
+        ),
+
+        html.Br(),
+
+        html.Label("Select City"),
+        dcc.Dropdown(
+            id="city",
+            options=[{"label":i,"value":i} for i in df["site"].dropna().unique()],
+            value=df["site"].dropna().unique()[0]
+        )
+
+    ], style={"width":"40%","margin":"auto"}),
+
+    html.Br(),
+)
 
 # -------------------------------
 # LAYOUT
@@ -105,7 +147,27 @@ app.layout = html.Div([
     dcc.Graph(id="bubble-chart"),
     dcc.Graph(id="correlation_graph"),
     dcc.Graph(id="map_graph")
+
+    # -------------------------------
+    # USER STORY 18
+    # -------------------------------
+    html.H2("Advanced Insights"),
+    html.Div(id="most_polluted_year"),
+    dcc.Graph(id="year_graph"),
+
+    # -------------------------------
+    # USER STORY 19
+    # -------------------------------
+    html.Div(id="most_polluted_month"),
+    dcc.Graph(id="month_graph"),
+
+    # -------------------------------
+    # USER STORY 20
+    # -------------------------------
+    html.Div(id="best_season"),
+    dcc.Graph(id="season_graph")
 ])
+
 
 # -------------------------------
 # DOWNLOAD CALLBACK
@@ -131,12 +193,20 @@ def download_dataset(n_clicks):
     Output("map_graph", "figure"),
     Output("stats-box", "children"),
     Output("pollutant-info", "children"),
+    Output("most_polluted_year","children"),
+    Output("year_graph","figure"),
+    Output("most_polluted_month","children"),
+    Output("month_graph","figure"),
+    Output("best_season","children"),
+    Output("season_graph","figure"),
+    Input("pollutant","value"),
+    Input("city","value"),
     Input("site", "value"),
     Input("pollutant", "value"),
     Input("date-range", "start_date"),
     Input("date-range", "end_date")
 )
-def update_dashboard(site, pollutant, start_date, end_date):
+def update_dashboard(site, pollutant, city, start_date, end_date):
     filtered = df[
         (df["site"] == site) &
         (df["date"] >= pd.to_datetime(start_date)) &
@@ -160,6 +230,63 @@ def update_dashboard(site, pollutant, start_date, end_date):
         html.P(f"Maximum: {filtered[pollutant].max():.2f}"),
         html.P(f"Standard Deviation: {filtered[pollutant].std():.2f}")
     ])
+
+    # -------------------------------
+    # USER STORY 18: Most Polluted Year
+    # -------------------------------
+    
+    year_avg = df.groupby("year")[pollutant].mean().reset_index()
+    worst_year = year_avg.sort_values(by=pollutant, ascending=False).iloc[0]["year"]
+
+    year_fig = px.bar(
+        year_avg,
+        x="year",
+        y=pollutant,
+        title="Average Pollution by Year"
+    )
+
+    year_text = html.H2(
+        f"Most Polluted Year: {int(worst_year)}",
+        style={"textAlign":"center","color":"red"}
+    )
+
+    # -------------------------------
+    # USER STORY 19: Most Polluted Month
+    # -------------------------------
+    month_avg = df.groupby("month")[pollutant].mean().reset_index()
+    worst_month = month_avg.sort_values(by=pollutant, ascending=False).iloc[0]["month"]
+
+    month_fig = px.bar(
+        month_avg,
+        x="month",
+        y=pollutant,
+        title="Average Pollution by Month"
+    )
+
+    month_text = html.H2(
+        f"Most Polluted Month: {int(worst_month)}",
+        style={"textAlign":"center","color":"red"}
+    )
+
+    # -------------------------------
+    # USER STORY 20: Best Season (City Based)
+    # -------------------------------
+    city_df = df[df["site"] == city]
+
+    season_avg = city_df.groupby("season")[pollutant].mean().reset_index()
+    best_season_val = season_avg.sort_values(by=pollutant, ascending=True).iloc[0]["season"]
+
+    season_fig = px.bar(
+        season_avg,
+        x="season",
+        y=pollutant,
+        title=f"Seasonal Air Quality in {city}"
+    )
+
+    season_text = html.H2(
+        f"Best Season to Visit {city}: {best_season_val}",
+        style={"textAlign":"center","color":"green"}
+    )
 
     pollutant_descriptions = {
         "no2": "Nitrogen dioxide is mainly produced by road traffic and can irritate the lungs.",
@@ -247,6 +374,8 @@ def update_dashboard(site, pollutant, start_date, end_date):
     )
     map_fig.update_layout(mapbox_style="open-street-map")
 
+    
+
     return (
         trend,
         monthly_fig,
@@ -256,189 +385,12 @@ def update_dashboard(site, pollutant, start_date, end_date):
         corr_fig,
         map_fig,
         stats_box,
-        pollutant_info
+        pollutant_info,
+        year_text, 
+        year_fig, 
+        month_text, 
+        month_fig, 
+        season_text, 
+        season_fig
     )
-
-# -------------------------------
-
-
-
-
-# NIKHIL CODE 
-from dash import Dash, dcc, html, Input, Output
-import pandas as pd
-import plotly.express as px
-
-# -------------------------------
-# LOAD DATA
-# -------------------------------
-file_id = "1O0EHdGpub7OxxS3L4S39DZnexZzmgXrR"
-url = f"https://drive.google.com/uc?id={file_id}"
-
-df = pd.read_csv(url)
-
-# -------------------------------
-# PREPROCESSING
-# -------------------------------
-df["date"] = pd.to_datetime(df["date"], errors="coerce")
-df["year"] = df["date"].dt.year
-df["month"] = df["date"].dt.month
-
-# Season mapping (User Story 3)
-def get_season(month):
-    if month in [12,1,2]:
-        return "Winter"
-    elif month in [3,4,5]:
-        return "Spring"
-    elif month in [6,7,8]:
-        return "Summer"
-    else:
-        return "Autumn"
-
-df["season"] = df["month"].apply(get_season)
-
-pollutants = ["co","nox","no2","o3","so2","pm10","pm25"]
-
-# -------------------------------
-# APP
-# -------------------------------
-app = Dash(__name__)
-
-app.layout = html.Div([
-
-    html.H1("Sprint 4 - Air Quality Insights",
-            style={"textAlign":"center"}),
-
-    # Filters
-    html.Div([
-        html.Label("Select Pollutant"),
-        dcc.Dropdown(
-            id="pollutant",
-            options=[{"label":i.upper(),"value":i} for i in pollutants],
-            value="pm25"
-        ),
-
-        html.Br(),
-
-        html.Label("Select City"),
-        dcc.Dropdown(
-            id="city",
-            options=[{"label":i,"value":i} for i in df["site"].dropna().unique()],
-            value=df["site"].dropna().unique()[0]
-        )
-
-    ], style={"width":"40%","margin":"auto"}),
-
-    html.Br(),
-        # -------------------------------
-    # USER STORY 1
-    # -------------------------------
-    html.Div(id="most_polluted_year"),
-    dcc.Graph(id="year_graph"),
-
-    # -------------------------------
-    # USER STORY 2
-    # -------------------------------
-    html.Div(id="most_polluted_month"),
-    dcc.Graph(id="month_graph"),
-
-    # -------------------------------
-    # USER STORY 3
-    # -------------------------------
-    html.Div(id="best_season"),
-    dcc.Graph(id="season_graph")
-
-])
-
-# -------------------------------
-# CALLBACK
-# -------------------------------
-@app.callback(
-    Output("most_polluted_year","children"),
-    Output("year_graph","figure"),
-    Output("most_polluted_month","children"),
-    Output("month_graph","figure"),
-    Output("best_season","children"),
-    Output("season_graph","figure"),
-    Input("pollutant","value"),
-    Input("city","value")
-)
-def update_dashboard(pollutant, city):
-
-    # -------------------------------
-    # USER STORY 1: Most Polluted Year
-    # -------------------------------
-    year_avg = df.groupby("year")[pollutant].mean().reset_index()
-    worst_year = year_avg.sort_values(by=pollutant, ascending=False).iloc[0]["year"]
-
-    year_fig = px.bar(
-        year_avg,
-        x="year",
-        y=pollutant,
-        title="Average Pollution by Year"
-    )
-
-    year_text = html.H2(
-        f"Most Polluted Year: {int(worst_year)}",
-        style={"textAlign":"center","color":"red"}
-    )
-
-    # -------------------------------
-    # USER STORY 2: Most Polluted Month
-    # -------------------------------
-    month_avg = df.groupby("month")[pollutant].mean().reset_index()
-    worst_month = month_avg.sort_values(by=pollutant, ascending=False).iloc[0]["month"]
-
-    month_fig = px.bar(
-        month_avg,
-        x="month",
-        y=pollutant,
-        title="Average Pollution by Month"
-    )
-
-    month_text = html.H2(
-        f"Most Polluted Month: {int(worst_month)}",
-        style={"textAlign":"center","color":"red"}
-    )
-
-    # -------------------------------
-    # USER STORY 3: Best Season (City Based)
-    # -------------------------------
-    city_df = df[df["site"] == city]
-
-    season_avg = city_df.groupby("season")[pollutant].mean().reset_index()
-    best_season_val = season_avg.sort_values(by=pollutant, ascending=True).iloc[0]["season"]
-
-    season_fig = px.bar(
-        season_avg,
-        x="season",
-        y=pollutant,
-        title=f"Seasonal Air Quality in {city}"
-    )
-
-    season_text = html.H2(
-        f"Best Season to Visit {city}: {best_season_val}",
-        style={"textAlign":"center","color":"green"}
-    )
-
-    return year_text, year_fig, month_text, month_fig, season_text, season_fig
-
-
-# -------------------------------
-# RUN
-# -------------------------------
-app.run(jupyter_mode="inline")
-
-
-
-
-
-
-
-
-
-
-
-
-
 
