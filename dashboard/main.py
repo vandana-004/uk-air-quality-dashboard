@@ -46,24 +46,18 @@ server = app.server
 
 app.layout = html.Div([
 
-    html.H1("Sprint 4 - Air Quality Insights",
-            style={"textAlign":"center"}),
+    html.H1(
+        "UK Air Quality Analytics Dashboard",
+        style={"textAlign": "center", "marginBottom": "30px"}
+    ),
+
 
     # Filters
     html.Div([
-        html.Label("Select Pollutant"),
-        dcc.Dropdown(
-            id="pollutant",
-            options=[{"label": i.upper(), "value": i} for i in pollutants],
-            value="pm2.5"
-        ),
-
-        html.Br(),
-
         html.Label("Select City"),
         dcc.Dropdown(
             id="city",
-            options=[{"label": i, "value": i} for i in df["site"].dropna().unique()],
+            options=[{"label":i,"value":i} for i in df["site"].dropna().unique()],
             value=df["site"].dropna().unique()[0]
         )
 
@@ -71,12 +65,8 @@ app.layout = html.Div([
 
     html.Br(),
 
-    html.H1(
-        "UK Air Quality Analytics Dashboard",
-        style={"textAlign": "center", "marginBottom": "30px"}
-    ),
-
-    html.Button("Download Cleaned Dataset", id="download-btn"),
+    
+    html.Button("Download Dataset", id="download-btn"),
     dcc.Download(id="download-data"),
 
     html.Br(),
@@ -88,6 +78,8 @@ app.layout = html.Div([
         start_date=df["date"].min().date(),
         end_date=df["date"].max().date()
     ),
+    html.H1("Air Quality Insights",
+            style={"textAlign":"center"}),
 
     html.Br(),
     html.Br(),
@@ -98,6 +90,27 @@ app.layout = html.Div([
         html.Div([html.H4("Average NO2"), html.H2(avg_no2)], className="card"),
         html.Div([html.H4("Average O3"), html.H2(avg_o3)], className="card"),
     ], style={"display": "flex", "justifyContent": "space-around"}),
+
+    html.Br(),
+
+    # Filters
+    html.Div([
+        html.Label("Select Monitoring Site"),
+        dcc.Dropdown(
+            id="site",
+            options=[{"label": i, "value": i} for i in sorted(df["site"].dropna().unique())],
+            value=sorted(df["site"].dropna().unique())[0]
+        ),
+
+        html.Br(),
+
+        html.Label("Select Pollutant"),
+        dcc.Dropdown(
+            id="pollutant",
+            options=[{"label": i.upper(), "value": i} for i in pollutants],
+            value="pm2.5"
+        )
+    ], style={"width": "30%", "margin": "auto"}),
 
     html.Br(),
 
@@ -117,20 +130,23 @@ app.layout = html.Div([
         dcc.Graph(id="distribution_graph")
     ]),
 
+    # US21 — Site type comparison
+    html.H2("Site Type Comparison", style={"textAlign": "center"}),
+    html.Div([
+        html.Label("Select Pollutant"),
+        dcc.Dropdown(
+            id="site-type-pollutant",
+            options=[{"label": p.upper(), "value": p} for p in pollutants],
+            value="no2",
+            clearable=False,
+        ),
+    ], style={"width": "30%", "margin": "auto"}),
+    dcc.Graph(id="site-type-chart"),
+    html.Br(),
+
     dcc.Graph(id="bubble-chart"),
     dcc.Graph(id="correlation_graph"),
     dcc.Graph(id="map_graph"),
-
-    html.H2("Advanced Insights"),
-    html.Div(id="most_polluted_year"),
-    dcc.Graph(id="year_graph"),
-
-    html.Div(id="most_polluted_month"),
-    dcc.Graph(id="month_graph"),
-
-    html.Div(id="best_season"),
-    dcc.Graph(id="season_graph"),
-])
 
     # -------------------------------
     # USER STORY 18
@@ -189,6 +205,7 @@ def download_dataset(n_clicks):
     Input("date-range", "end_date")
 )
 def update_dashboard(pollutant, city, start_date, end_date):
+
     filtered = df[
         (df["site"] == city) &
         (df["date"] >= pd.to_datetime(start_date)) &
@@ -392,6 +409,43 @@ def update_dashboard(pollutant, city, start_date, end_date):
         season_text, 
         season_fig
     )
+
+@app.callback(
+Output("site-type-chart", "figure"),
+Input("site-type-pollutant", "value")
+)
+def update_site_type_chart(pollutant):
+    site_type_avg = (
+        df.groupby("site_type")[pollutant]
+        .mean()
+        .dropna()
+        .reset_index()
+        .sort_values(by=pollutant, ascending=False)
+    )
+    site_type_avg.columns = ["site_type", "value"]
+
+    fig = px.bar(
+        site_type_avg,
+        x="site_type",
+        y="value",
+        color="site_type",
+        title=f"Average {pollutant.upper()} by Site Type",
+        labels={"site_type": "Site Type", "value": pollutant.upper()},
+        color_discrete_sequence=px.colors.qualitative.Set2,
+    )
+
+    fig.update_layout(
+        xaxis_title="Site Type",
+        yaxis_title=f"Average {pollutant.upper()}",
+        plot_bgcolor="#343a40",
+        paper_bgcolor="#343a40",
+        font_color="white",
+        showlegend=False,
+        margin=dict(t=50, b=40, l=60, r=20),
+    )
+    fig.update_yaxes(showgrid=True, gridcolor="#4a4f54")
+
+    return fig
 
 if __name__ == "__main__":
     app.run(debug=True)
