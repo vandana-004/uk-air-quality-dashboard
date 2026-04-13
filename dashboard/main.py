@@ -304,6 +304,15 @@ def update_dashboard(pollutant, city, start_date, end_date):
         style={"textAlign":"center","color":"green"}
     )
 
+# -------------------------------
+# USER STORY 21 — Peak Hour
+# -------------------------------
+    html.H2("Peak Pollution Hour", style={"textAlign": "center"}),
+    
+    dcc.Graph(id="hourly_pollution_graph"),
+    
+    html.Div(id="peak_hour_text", style={"textAlign": "center", "fontSize": 20}),
+
     pollutant_descriptions = {
         "no2": "Nitrogen dioxide is mainly produced by road traffic and can irritate the lungs.",
         "pm2.5": "PM2.5 refers to very small particles that can enter deep into the lungs and bloodstream.",
@@ -446,6 +455,51 @@ def update_site_type_chart(pollutant):
     fig.update_yaxes(showgrid=True, gridcolor="#4a4f54")
 
     return fig
+
+#-------------------
+#USER STORY 25
+#-------------------
+@app.callback(
+    Output("hourly_pollution_graph", "figure"),
+    Output("peak_hour_text", "children"),
+    Input("pollutant", "value"),
+    Input("city", "value"),
+    Input("date-range", "start_date"),
+    Input("date-range", "end_date")
+)
+def update_peak_hour(pollutant, city, start_date, end_date):
+
+    filtered = df[
+        (df["site"] == city) &
+        (df["date"] >= pd.to_datetime(start_date)) &
+        (df["date"] <= pd.to_datetime(end_date))
+    ].copy()
+
+    if filtered.empty or pollutant not in filtered.columns:
+        return {}, "No data available."
+
+    filtered["hour"] = filtered["date"].dt.hour
+
+    hourly_means = filtered.groupby("hour")[pollutant].mean()
+
+    peak_hour = hourly_means.idxmax()
+
+    colors = ["red" if h == peak_hour else "blue" for h in hourly_means.index]
+
+    fig = px.bar(
+        x=hourly_means.index,
+        y=hourly_means.values,
+        labels={"x": "Hour of Day", "y": f"Average {pollutant.upper()}"},
+        title=f"Average {pollutant.upper()} by Hour"
+    )
+
+    fig.update_traces(marker_color=colors)
+
+    fig.update_layout(xaxis=dict(dtick=1))
+
+    text = f"Most Polluted Hour: {peak_hour}:00"
+
+    return fig, text
 
 if __name__ == "__main__":
     app.run(debug=True)
