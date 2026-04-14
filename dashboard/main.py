@@ -503,3 +503,215 @@ def update_peak_hour(pollutant, city, start_date, end_date):
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+#CHAT ASSITANT AND USER STORY COMINED CODE 
+from dash import Dash, dcc, html, Input, Output
+import pandas as pd
+import plotly.express as px
+
+# -------------------------------
+# LOAD DATA
+# -------------------------------
+file_id = "1O0EHdGpub7OxxS3L4S39DZnexZzmgXrR"
+url = f"https://drive.google.com/uc?id={file_id}"
+
+df = pd.read_csv(url)
+
+# -------------------------------
+# PREPROCESSING
+# -------------------------------
+df["date"] = pd.to_datetime(df["date"], errors="coerce")
+df["year"] = df["date"].dt.year
+df["month"] = df["date"].dt.month
+
+# Season mapping
+def get_season(month):
+    if month in [12,1,2]:
+        return "Winter"
+    elif month in [3,4,5]:
+        return "Spring"
+    elif month in [6,7,8]:
+        return "Summer"
+    else:
+        return "Autumn"
+
+df["season"] = df["month"].apply(get_season)
+
+pollutants = ["co","nox","no2","o3","so2","pm10","pm25"]
+
+# -------------------------------
+# ✅ ENHANCED AI ASSISTANT
+# -------------------------------
+def air_quality_assistant(query):
+    q = query.lower()
+
+    if "polluted year" in q:
+        year_data = df.groupby("year")["pm25"].mean()
+        year = year_data.idxmax()
+        value = round(year_data.max(), 2)
+
+        return f"The most polluted year is {year} with an average PM2.5 of {value}. This indicates higher pollution levels. You can verify this in the yearly chart above."
+
+    elif "polluted month" in q:
+        month_data = df.groupby("month")["pm25"].mean()
+        month = month_data.idxmax()
+        value = round(month_data.max(), 2)
+
+        return f"The most polluted month is {month} with PM2.5 around {value}. This may be due to weather conditions like low wind. Check the monthly graph."
+
+    elif any(word in q for word in ["best season", "air quality best", "when is air quality best", "clean air", "lowest pollution"]):
+        season_data = df.groupby("season")["pm25"].mean()
+        season = season_data.idxmin()
+        value = round(season_data.min(), 2)
+
+        return f"The best season is {season} with lowest pollution (PM2.5 ≈ {value}). You can confirm this in the seasonal chart."
+
+    elif "polluted city" in q:
+        city_data = df.groupby("site")["pm25"].mean()
+        city = city_data.idxmax()
+        value = round(city_data.max(), 2)
+
+        return f"The most polluted city is {city} with PM2.5 around {value}. This indicates poor air quality compared to others."
+
+    elif "trend" in q:
+        return "Pollution trends show how air quality changes over time. See the trend chart for patterns."
+
+    else:
+        return "Ask about polluted year, month, city, best season, or trend."
+
+# -------------------------------
+# APP
+# -------------------------------
+app = Dash(__name__)
+
+app.layout = html.Div([
+
+    html.H1("Sprint 4 - Air Quality Insights with AI Assistant",
+            style={"textAlign":"center"}),
+
+    # Filters
+    html.Div([
+        html.Label("Select Pollutant"),
+        dcc.Dropdown(
+            id="pollutant",
+            options=[{"label":i.upper(),"value":i} for i in pollutants],
+            value="pm25"
+        ),
+
+        html.Br(),
+
+        html.Label("Select City"),
+        dcc.Dropdown(
+            id="city",
+            options=[{"label":i,"value":i} for i in df["site"].dropna().unique()],
+            value=df["site"].dropna().unique()[0]
+        )
+
+    ], style={"width":"40%","margin":"auto"}),
+
+    html.Br(),
+
+    # -------------------------------
+    # USER STORY 1
+    # -------------------------------
+    html.Div(id="most_polluted_year"),
+    dcc.Graph(id="year_graph"),
+
+    # -------------------------------
+    # USER STORY 2
+    # -------------------------------
+    html.Div(id="most_polluted_month"),
+    dcc.Graph(id="month_graph"),
+
+    # -------------------------------
+    # USER STORY 3
+    # -------------------------------
+    html.Div(id="best_season"),
+    dcc.Graph(id="season_graph"),
+
+    html.Br(),
+
+    # -------------------------------
+    # AI ASSISTANT UI
+    # -------------------------------
+    html.H3("Ask AI Assistant"),
+    dcc.Input(id="user_input", type="text", placeholder="Ask something..."),
+    html.Button("Ask", id="ask_btn"),
+    html.Div(id="ai_output", style={"marginTop":"20px","fontWeight":"bold"})
+
+])
+# -------------------------------
+# MAIN CALLBACK
+# -------------------------------
+@app.callback(
+    Output("most_polluted_year","children"),
+    Output("year_graph","figure"),
+    Output("most_polluted_month","children"),
+    Output("month_graph","figure"),
+    Output("best_season","children"),
+    Output("season_graph","figure"),
+    Input("pollutant","value"),
+    Input("city","value")
+)
+def update_dashboard(pollutant, city):
+
+    # USER STORY 1
+    year_avg = df.groupby("year")[pollutant].mean().reset_index()
+    worst_year = year_avg.sort_values(by=pollutant, ascending=False).iloc[0]["year"]
+
+    year_fig = px.bar(year_avg, x="year", y=pollutant,
+                      title="Average Pollution by Year")
+
+    year_text = html.H2(
+        f"Most Polluted Year: {int(worst_year)}",
+        style={"textAlign":"center","color":"red"}
+    )
+
+    # USER STORY 2
+    month_avg = df.groupby("month")[pollutant].mean().reset_index()
+    worst_month = month_avg.sort_values(by=pollutant, ascending=False).iloc[0]["month"]
+
+    month_fig = px.bar(month_avg, x="month", y=pollutant,
+                       title="Average Pollution by Month")
+
+    month_text = html.H2(
+        f"Most Polluted Month: {int(worst_month)}",
+        style={"textAlign":"center","color":"red"}
+    )
+
+    # USER STORY 3
+    city_df = df[df["site"] == city]
+
+    season_avg = city_df.groupby("season")[pollutant].mean().reset_index()
+    best_season_val = season_avg.sort_values(by=pollutant, ascending=True).iloc[0]["season"]
+
+    season_fig = px.bar(season_avg, x="season", y=pollutant,
+                        title=f"Seasonal Air Quality in {city}")
+
+    season_text = html.H2(
+        f"Best Season to Visit {city}: {best_season_val}",
+        style={"textAlign":"center","color":"green"}
+    )
+
+    return year_text, year_fig, month_text, month_fig, season_text, season_fig
+
+
+# -------------------------------
+# AI CALLBACK
+# -------------------------------
+@app.callback(
+    Output("ai_output","children"),
+    Input("ask_btn","n_clicks"),
+    Input("user_input","value")
+)
+def chat(n_clicks, query):
+    if n_clicks and query:
+        return air_quality_assistant(query)
+    return ""
+
+# -------------------------------
+# RUN
+# -------------------------------
+app.run(jupyter_mode="inline")
