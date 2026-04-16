@@ -146,6 +146,14 @@ app.layout = html.Div([
 
     dcc.Graph(id="bubble-chart"),
     dcc.Graph(id="correlation_graph"),
+    html.Div(id="correlation-explanation", style={
+    "padding": "20px",
+    "margin": "20px auto",
+    "width": "70%",
+    "backgroundColor": "#f8f9fa",
+    "borderRadius": "8px",
+    "fontSize": "15px"
+}),
     dcc.Graph(id="map_graph"),
 
     # -------------------------------
@@ -199,6 +207,7 @@ def download_dataset(n_clicks):
     Output("month_graph", "figure"),
     Output("best_season", "children"),
     Output("season_graph", "figure"),
+    Output("correlation-explanation", "children"),
     Input("pollutant", "value"),
     Input("city", "value"),
     Input("date-range", "start_date"),
@@ -234,7 +243,8 @@ def update_dashboard(pollutant, city, start_date, end_date):
             no_text,
             empty_fig,
             no_text,
-            empty_fig
+            empty_fig,
+            no_text,
         )
 
     filtered = filtered.sort_values("date").tail(1000)
@@ -378,14 +388,54 @@ def update_dashboard(pollutant, city, start_date, end_date):
         title="Pollution Relationship: PM2.5 vs NO2, CO, and O3"
     )
 
+# -------------------------------
+# USER STORY 23: Correlation Matrix
+# -------------------------------
+    
     corr = df[pollutants].dropna().sample(min(5000, len(df.dropna(subset=pollutants)))).corr()
     corr_fig = px.imshow(
         corr,
-        text_auto=True,
+        text_auto=".2f",
         color_continuous_scale="RdBu_r",
+        zmin=-1, zmax=1,
         title="Correlation Heatmap"
     )
 
+    strong_pos = []
+    strong_neg = []
+    pollutant_list = corr.columns.tolist()
+    for i in range(len(pollutant_list)):
+        for j in range(i+1, len(pollutant_list)):
+            val = corr.iloc[i, j]
+            pair = f"{pollutant_list[i].upper()} & {pollutant_list[j].upper()} (r={val:.2f})"
+            if val >= 0.7:
+                strong_pos.append(pair)
+            elif val <= -0.7:
+                strong_neg.append(pair)
+
+    explanation_children = [html.H4("Correlation Analysis (US23)")]
+    if strong_pos:
+        explanation_children.append(html.P(
+            f"Strong positive relationships (r ≥ 0.7): {', '.join(strong_pos)}. "
+            "These pollutants tend to rise and fall together, likely sharing common sources."
+        ))
+    else:
+        explanation_children.append(html.P("No strong positive correlations found (r ≥ 0.7)."))
+
+    if strong_neg:
+        explanation_children.append(html.P(
+            f"Strong negative relationships (r ≤ -0.7): {', '.join(strong_neg)}. "
+            "These pollutants tend to move in opposite directions."
+        ))
+    else:
+        explanation_children.append(html.P("No strong negative correlations found (r ≤ -0.7)."))
+
+    explanation_children.append(html.P(
+        "Note: Correlation values range from -1 (perfect negative) to +1 (perfect positive). "
+        "Values near 0 indicate no linear relationship."
+    ))
+
+    corr_explanation = html.Div(explanation_children)
     map_data = df.groupby("site").first().reset_index()
 
     map_fig = px.scatter_mapbox(
@@ -416,7 +466,8 @@ def update_dashboard(pollutant, city, start_date, end_date):
         month_text, 
         month_fig, 
         season_text, 
-        season_fig
+        season_fig,
+        corr_explanation
     )
 
 @app.callback(
