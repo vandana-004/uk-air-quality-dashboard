@@ -398,7 +398,7 @@ def update_dashboard(pollutant, city, start_date, end_date):
         text_auto=".2f",
         color_continuous_scale="RdBu_r",
         zmin=-1, zmax=1,
-        title="Correlation Heatmap (US23)"
+        title="Correlation Heatmap"
     )
 
     strong_pos = []
