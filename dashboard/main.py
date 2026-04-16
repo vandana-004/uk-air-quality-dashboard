@@ -173,7 +173,16 @@ app.layout = html.Div([
     # USER STORY 20
     # -------------------------------
     html.Div(id="best_season"),
-    dcc.Graph(id="season_graph")
+    dcc.Graph(id="season_graph"),
+
+    # -------------------------------
+    # USER STORY 21 — Peak Hour
+    # -------------------------------
+    html.H2("Peak Pollution Hour", style={"textAlign": "center"}),
+    
+    dcc.Graph(id="hourly_pollution_graph"),
+    
+    html.Div(id="peak_hour_text", style={"textAlign": "center", "fontSize": 20}),
 ])
 
 
@@ -236,6 +245,7 @@ def update_dashboard(pollutant, city, start_date, end_date):
             empty_fig,
             empty_fig,
             empty_fig,
+            
             no_stats,
             no_info,
             no_text,
@@ -243,6 +253,7 @@ def update_dashboard(pollutant, city, start_date, end_date):
             no_text,
             empty_fig,
             no_text,
+            empty_fig,
             empty_fig,
             no_text,
         )
@@ -314,15 +325,6 @@ def update_dashboard(pollutant, city, start_date, end_date):
         style={"textAlign":"center","color":"green"}
     )
 
-# -------------------------------
-# USER STORY 21 — Peak Hour
-# -------------------------------
-    html.H2("Peak Pollution Hour", style={"textAlign": "center"}),
-    
-    dcc.Graph(id="hourly_pollution_graph"),
-    
-    html.Div(id="peak_hour_text", style={"textAlign": "center", "fontSize": 20}),
-
     pollutant_descriptions = {
         "no2": "Nitrogen dioxide is mainly produced by road traffic and can irritate the lungs.",
         "pm2.5": "PM2.5 refers to very small particles that can enter deep into the lungs and bloodstream.",
@@ -392,6 +394,7 @@ def update_dashboard(pollutant, city, start_date, end_date):
 # USER STORY 23: Correlation Matrix
 # -------------------------------
     
+
     corr = df[pollutants].dropna().sample(min(5000, len(df.dropna(subset=pollutants)))).corr()
     corr_fig = px.imshow(
         corr,
@@ -413,7 +416,7 @@ def update_dashboard(pollutant, city, start_date, end_date):
             elif val <= -0.7:
                 strong_neg.append(pair)
 
-    explanation_children = [html.H4("Correlation Analysis (US23)")]
+    explanation_children = [html.H4("Correlation Analysis")]
     if strong_pos:
         explanation_children.append(html.P(
             f"Strong positive relationships (r ≥ 0.7): {', '.join(strong_pos)}. "
@@ -436,6 +439,7 @@ def update_dashboard(pollutant, city, start_date, end_date):
     ))
 
     corr_explanation = html.Div(explanation_children)
+
     map_data = df.groupby("site").first().reset_index()
 
     map_fig = px.scatter_mapbox(
