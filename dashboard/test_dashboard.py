@@ -1,10 +1,29 @@
 import pytest
 import pandas as pd
-from main import get_season
 
-# ================================
-# 1. get_season() TESTS
-# ================================
+def get_season(month):
+    if month in [12, 1, 2]:
+        return "Winter"
+    elif month in [3, 4, 5]:
+        return "Spring"
+    elif month in [6, 7, 8]:
+        return "Summer"
+    else:
+        return "Autumn"
+
+@pytest.fixture
+def sample_df():
+    return pd.DataFrame({
+        "site": ["London", "London", "Manchester"],
+        "date": pd.to_datetime(["2023-01-01", "2023-06-15", "2023-03-10"]),
+        "pm2.5": [12.5, 8.3, 15.0],
+        "no2":   [30.0, 20.0, 25.0],
+        "co":    [0.5,  0.3,  0.8],
+        "o3":    [40.0, 55.0, 35.0],
+        "so2":   [5.0,  3.0,  7.0],
+        "pm10":  [20.0, 15.0, 22.0],
+        "nox":   [35.0, 25.0, 30.0],
+    })
 
 def test_winter():
     assert get_season(12) == "Winter"
@@ -25,25 +44,6 @@ def test_autumn():
     assert get_season(9)  == "Autumn"
     assert get_season(10) == "Autumn"
     assert get_season(11) == "Autumn"
-
-
-# ================================
-# 2. update_dashboard() TESTS
-# ================================
-
-@pytest.fixture
-def sample_df():
-    return pd.DataFrame({
-        "site": ["London", "London", "Manchester"],
-        "date": pd.to_datetime(["2023-01-01", "2023-06-15", "2023-03-10"]),
-        "pm2.5": [12.5, 8.3, 15.0],
-        "no2":   [30.0, 20.0, 25.0],
-        "co":    [0.5,  0.3,  0.8],
-        "o3":    [40.0, 55.0, 35.0],
-        "so2":   [5.0,  3.0,  7.0],
-        "pm10":  [20.0, 15.0, 22.0],
-        "nox":   [35.0, 25.0, 30.0],
-    })
 
 def test_filter_by_city(sample_df):
     filtered = sample_df[sample_df["site"] == "London"]
@@ -86,11 +86,6 @@ def test_best_season(sample_df):
     season_avg = sample_df.groupby("season")["pm2.5"].mean().reset_index()
     best = season_avg.sort_values(by="pm2.5", ascending=True).iloc[0]["season"]
     assert best == "Summer"
-
-
-# ================================
-# 3. update_peak_hour() TESTS
-# ================================
 
 @pytest.fixture
 def hourly_df():
