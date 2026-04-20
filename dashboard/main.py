@@ -32,7 +32,30 @@ def get_season(month):
 df["season"] = df["month"].apply(get_season)
 
 pollutants = ["co", "nox", "no2", "o3", "so2", "pm10", "pm2.5"]
+# -------------------------------
+# AQI + RECOMMENDATION (YOUR PART)
+# -------------------------------
+def calculate_aqi(pm25):
+    if pm25 <= 12: return 50
+    elif pm25 <= 35.4: return 100
+    elif pm25 <= 55.4: return 150
+    elif pm25 <= 150.4: return 200
+    elif pm25 <= 250.4: return 300
+    else: return 400
 
+def get_recommendation(aqi):
+    if aqi <= 50:
+        return "Good air quality"
+    elif aqi <= 100:
+        return "Moderate – Sensitive people be careful"
+    elif aqi <= 150:
+        return "Unhealthy for sensitive groups"
+    elif aqi <= 200:
+        return "Unhealthy – Wear mask"
+    elif aqi <= 300:
+        return "Very Unhealthy – Stay indoors"
+    else:
+        return "Hazardous – Avoid going outside"
 # KPI values
 avg_pm25 = round(df["pm2.5"].mean(), 2)
 avg_no2 = round(df["no2"].mean(), 2)
@@ -118,6 +141,17 @@ app.layout = html.Div([
     html.Br(),
     html.Div(id="pollutant-info"),
     html.Br(),
+    
+# AQI CARD
+html.Div(id="aqi_card"),
+
+html.Br(),
+
+# TOP POLLUTED
+dcc.Graph(id="top_polluted"),
+
+# HOTSPOT MAP
+dcc.Graph(id="hotspot_map"),
 
     # Graphs
     html.Div([
@@ -201,6 +235,9 @@ def download_dataset(n_clicks):
 # DASHBOARD CALLBACK
 # -------------------------------
 @app.callback(
+    Output("aqi_card", "children"),
+    Output("top_polluted", "figure"),
+    Output("hotspot_map", "figure"),
     Output("trend_graph", "figure"),
     Output("monthly_graph", "figure"),
     Output("site_graph", "figure"),
@@ -259,6 +296,35 @@ def update_dashboard(pollutant, city, start_date, end_date):
         )
 
     filtered = filtered.sort_values("date").tail(1000)
+    # AQI CALCULATION
+latest_pm25 = filtered["pm2.5"].iloc[-1]
+aqi = calculate_aqi(latest_pm25)
+rec = get_recommendation(aqi)
+
+aqi_card = html.Div([
+    html.H3(f"AQI: {aqi}"),
+    html.P(rec)
+])
+
+# TOP 5 POLLUTED
+top_sites = df.groupby("site")[pollutant].mean().reset_index()
+top_sites = top_sites.sort_values(by=pollutant, ascending=False).head(5)
+
+top_fig = px.bar(top_sites, x="site", y=pollutant, title="Top 5 Polluted Areas")
+
+# HOTSPOT MAP (FIXED)
+map_data = df.groupby("site").mean(numeric_only=True).reset_index()
+map_data = map_data.dropna(subset=[pollutant, "latitude", "longitude"])
+
+map_fig = px.scatter_map(
+    map_data,
+    lat="latitude",
+    lon="longitude",
+    color=pollutant,
+    size=pollutant,
+    hover_name="site",
+    title="Pollution Hotspots"
+)
 
     stats_box = html.Div([
         html.H4(f"{pollutant.upper()} Summary Statistics"),
@@ -456,6 +522,8 @@ def update_dashboard(pollutant, city, start_date, end_date):
     
 
     return (
+        aqi_card,
+        top_fig,
         trend,
         monthly_fig,
         site_fig,
