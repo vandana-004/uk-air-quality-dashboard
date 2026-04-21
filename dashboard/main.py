@@ -752,20 +752,6 @@ def update_dashboard(pollutant, city):
 
     return year_text, year_fig, month_text, month_fig, season_text, season_fig
 
-
-# -------------------------------
-# AI CALLBACK
-# -------------------------------
-@app.callback(
-    Output("ai_output","children"),
-    Input("ask_btn","n_clicks"),
-    Input("user_input","value")
-)
-def chat(n_clicks, query):
-    if n_clicks and query:
-        return air_quality_assistant(query)
-    return ""
-
 # -------------------------------
 # RUN
 # -------------------------------
