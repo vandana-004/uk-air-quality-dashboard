@@ -24,7 +24,7 @@ for chunk in pd.read_csv('/content/drive/MyDrive/UK Air Quality/AURN_2015_2023.c
 df = pd.concat(chunks)
 print("Loaded! Shape:", df.shape)
 
-# Q1: Load dataset & initial exploration
+# Load dataset & initial exploration
 from google.colab import drive
 drive.mount('/content/drive')
 
@@ -41,7 +41,7 @@ print("\nFirst 5 Rows:\n", df.head())
 import numpy as np
 np.random.seed(42)
 
-# Q2: Drop unnecessary columns & remove duplicates
+# Drop unnecessary columns & remove duplicates
 
 # Drop unnecessary columns
 cols_to_drop = ["Unnamed: 0", "v10", "v2.5", "nv10", "nv2.5", "no"]
@@ -56,7 +56,7 @@ print("Remaining rows:", len(df))
 print(f"Duplicates removed: {before - len(df)}")
 print("Remaining rows:", len(df))
 
-# Q3: Parse dates & extract time features
+# Parse dates & extract time features
 
 # Convert date column to datetime
 df["date"] = pd.to_datetime(df["date"], errors='coerce')
@@ -70,7 +70,7 @@ df["hour"]  = df["date"].dt.hour
 print("Sample date features:")
 print(df[["date", "year", "month", "day", "hour"]].head())
 
-# Q4: Handle missing values
+# Handle missing values
 print("Missing Values Before:\n", df.isnull().sum())
 
 # Fill numeric columns with median
@@ -82,7 +82,7 @@ df = df.dropna(subset=["pm2.5", "pm10", "no2"])
 
 print("\nMissing Values After:\n", df.isnull().sum())
 
-# Q5: Remove outliers using IQR
+# Remove outliers using IQR
 
 # Calculate All boundaries first before removing anything
 bounds = {}
