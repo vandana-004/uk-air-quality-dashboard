@@ -29,8 +29,9 @@ Confirm NO2 and PM2.5 columns exist.
 Check units of measurements
 Document safe/unsafe thresholds
 Estimated Effort: 6-8 hours
+
 User Story 3(medium) 
-A  woman living in the UK wants to view air pollutant levels by season (Spring, Summer, Autumn, UWinter), so that she can adjust my skincare routine according to seasonal air quality conditions.
+A woman living in the UK wants to view air pollutant levels by season (Spring, Summer, Autumn, UWinter), so that she can adjust my skincare routine according to seasonal air quality conditions.
 It gives user values.
 Links to environment data and real world data decision skincare routine.
 Requires Seasonal grouping 
