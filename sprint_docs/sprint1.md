@@ -37,6 +37,7 @@ Links to environment data and real world data decision skincare routine.
 Requires Seasonal grouping 
 Measurable and testable
 Estimated Effort: 10-12 hours
+
 User Story 4 (medium priority)
 As a student, I want to download the dataset, so that I can so that I can use it for further analysis.
 Estimated Effort: 6-8 hours
